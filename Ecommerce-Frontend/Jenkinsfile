@@ -9,6 +9,9 @@ pipeline {
         AWS_REGION = 'ap-south-1'
         S3_BUCKET = 'ecommerce-frontend-dev-679846927479'
         CLOUDFRONT_DISTRIBUTION_ID = 'E7HP0DN4WUIH9'
+
+        AWS_SHARED_CREDENTIALS_FILE = '/var/lib/jenkins/.aws/credentials'
+        AWS_CONFIG_FILE             = '/var/lib/jenkins/.aws/config'
     }
 
     stages {
@@ -19,10 +22,24 @@ pipeline {
             }
         }
 
+        stage('Verify Environment') {
+            steps {
+                sh '''
+                whoami
+                pwd
+                node -v
+                npm -v
+                aws --version
+                aws sts get-caller-identity
+                aws s3 ls
+                '''
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 dir('Ecommerce-Frontend') {
-                    sh 'npm install'
+                    sh 'npm ci'
                 }
             }
         }
@@ -58,12 +75,11 @@ pipeline {
 
     post {
         success {
-            echo "Frontend Deployment Successful"
+            echo 'Frontend Deployment Successful'
         }
 
         failure {
-            echo "Frontend Deployment Failed"
+            echo 'Frontend Deployment Failed'
         }
     }
 }
-
