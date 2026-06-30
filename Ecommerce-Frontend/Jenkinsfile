@@ -1,0 +1,69 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'NodeJS-18'
+    }
+
+    environment {
+        AWS_REGION = 'ap-south-1'
+        S3_BUCKET = 'ecommerce-frontend-dev-679846927479'
+        CLOUDFRONT_DISTRIBUTION_ID = 'E7HP0DN4WUIH9'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('Ecommerce-Frontend') {
+                    sh 'npm install'
+                }
+            }
+        }
+
+        stage('Build React App') {
+            steps {
+                dir('Ecommerce-Frontend') {
+                    sh 'npm run build'
+                }
+            }
+        }
+
+        stage('Upload to S3') {
+            steps {
+                dir('Ecommerce-Frontend') {
+                    sh """
+                    aws s3 sync dist/ s3://${S3_BUCKET} --delete
+                    """
+                }
+            }
+        }
+
+        stage('Invalidate CloudFront Cache') {
+            steps {
+                sh """
+                aws cloudfront create-invalidation \
+                --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} \
+                --paths "/*"
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Frontend Deployment Successful"
+        }
+
+        failure {
+            echo "Frontend Deployment Failed"
+        }
+    }
+}
+
